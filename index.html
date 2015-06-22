@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Let's JavaScript: Objects, Prototypes and Inheritance -- Part 1</title>
+
+		<meta name="description" content="An overview of our first talk about JavaScript objects, the prototype paradigm and inheritance-but-not-really">
+		<meta name="author" content="Nathaniel Lee">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<style>
+			.reveal h2 {
+				text-transform: uppercase;
+			}
+		</style>
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal convex">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>Let's JavaScript</h1>
+					<h3>
+						Objects and Prototypes
+					</h3>
+					<p>
+						<small>June 18, 2015 - <a href="http://www.appnexus.com">AppNexus</a></small>
+					</p>
+				</section>
+
+				<section>
+					<h2>Objects</h2>
+				</section>
+
+				<section>
+					<h3>What is an object?</h3>
+					<p>An object in JavaScript is just a collection of key-value pairs.</p>
+					<p>
+						<small>(They're associative arrays like Ruby's <a href="http://ruby-doc.org/core-2.2.2/Hash.html">Hash</a> and Python's <a href="https://docs.python.org/3.5/tutorial/datastructures.html#dictionaries">Dictionary</a>.)</small>
+					</p>
+				</section>
+
+				<section>
+					<h3>Properties</h3>
+					<p>Each key-value pair in an object represents a property of that object.</p>
+				</section>
+
+				<section>
+					<h3>Methods</h3>
+					<p>Property values can be of any type, and when a value is a function the property is specifically referred to as a method.</p>
+				</section>
+
+				<section>
+					<h3>Dot notation</h3>
+					<ul>
+						<li>Preferred due to consistency with other languages' syntax for object properties.</li>
+						<li>Must adhere to the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types#Variables">rules for naming variables</a>.</li>
+					</ul>
+				</section>
+
+				<section>
+					<h3>Bracket notation</h3>
+					<ul>
+						<li>Must be used when dynamically generating property keys.</li>
+						<li>Must be used for keys that don't adhere to the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types#Variables">rules for naming variables</a>.</li>
+					</ul>
+				</section>
+
+				<section>
+					<h3>Keys are strings</h3>
+					<p>Any value used as an object property key is converted according to the rules of JavaScript's internal <a href="http://www.ecma-international.org/ecma-262/5.1/#sec-9.8">ToString abstract operation</a> which can have unexpected results.</p>
+				</section>
+
+				<section>
+					<h3>Arrays as property keys</h3>
+					<pre><code data-trim contenteditable>
+var obj = {};
+var arr = [1, 2, 3];    // Coerced to "1,2,3".
+var str = "1,2,3";
+
+obj[str] = "abc";
+obj[arr] = "xyz";
+
+obj[str];    // "xyz"
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Objects as property keys</h3>
+					<pre><code data-trim contenteditable>
+var obj1 = {};
+var obj2 = {
+    a: 1,
+    b: 2
+};    // Coerced to "[object Object]".
+var obj3 = {
+    foo: "bar"
+};    // Coerced to "[object Object]".
+
+obj1[obj2] = "abc";
+obj1[obj3] = "xyz";
+
+obj1[obj2];    // "xyz"
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Getters on new objects</h3>
+					<pre><code data-trim contenteditable>
+var obj = {
+    a: 1,
+    get b() {    // Getter methods cannot have any parameters.
+        return this.a * 2;
+    }
+};
+
+obj.b;    // 2
+
+obj.a = 5;
+obj.b;    // 10
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Setters on new objects</h3>
+					<pre><code data-trim contenteditable>
+var obj = {
+    a: 1,
+    set b(x) {    // Setter methods must have exactly 1 parameter.
+        this.a = x / 2;
+    }
+};
+
+obj.a;    // 1
+obj.b;    // undefined
+
+obj.b = 4;
+obj.a;    // 2
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Beware of infinite loops</h3>
+					<pre><code data-trim contenteditable>
+var obj = {
+    a: 1,
+    get a() {
+        return this.a * 2;
+    },
+    set a(x) {
+        this.a = x / 2;
+    }
+};
+					</code></pre>
+					<p>
+						<small>(We can define this object, but any attempt to read or write <code>a</code> will suck.)</small>
+					</p>
+				</section>
+
+				<section>
+					<h3>Object.defineProperty</h3>
+					<pre><code data-trim contenteditable>
+var obj = {};
+
+Object.defineProperty(obj, "a", {
+    configurable: true,
+    enumerable: true,
+    value: 1,
+    writable: true
+});
+
+Object.defineProperty(obj, "b", {
+    configurable: false,
+    enumerable: false,
+    get: function () {
+        return this.a * 2;
+    },
+    set: function (x) {
+        this.a = x / 2;
+    }
+});
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Property attributes</h3>
+					<dl>
+						<dt>configurable</dt>
+						<dd>Indicates whether the property can be deleted and whether its attributes can be modified. Defaults to false.</dd>
+						<dt>enumerable</dt>
+						<dd>Indicates whether the property's key will appear during enumeration of the object's properties. Defaults to false.</dd>
+					</dl>
+				</section>
+
+				<section>
+					<h3>Data attributes</h3>
+					<dl>
+						<dt>value</dt>
+						<dd>The property's value which can be of any valid JavaScript type. Defaults to undefined.</dd>
+						<dt>writable</dt>
+						<dd>Indicates whether the property's value can be set with the assignment operator (<code>=</code>). Defaults to false.</dd>
+					</dl>
+				</section>
+
+				<section>
+					<h3>Accessor attributes</h3>
+					<dl>
+						<dt>get</dt>
+						<dd>The getter method for this property. Defaults to undefined.</dd>
+						<dt>set</dt>
+						<dd>The setter method for this property. Defaults to undefined.</dd>
+					</dl>
+				</section>
+
+				<section>
+					<h3>Data or accessor</h3>
+					<p>Every property defined via <code>Object.defineProperty</code> must have the <code>configurable</code> and <code>enumerable</code> attributes (both default to false) and can have <em>either</em> data or accessor attributes.</p>
+				</section>
+
+				<section>
+					<h2>Prototypes</h2>
+				</section>
+
+				<section>
+					<h3>What is a prototype?</h3>
+					<p>Every object has an internal <code>[[Prototype]]</code> property that points to another object that it "inherits" from.</p>
+					<p>An object's prototype is essentially a set of default properties.</p>
+				</section>
+
+				<section>
+					<pre><code data-trim contenteditable>
+var arr = [];
+var func = function () {};
+var obj = {};
+
+arr.push("a");      // Works even though `arr` doesn't have a `push` method.
+func.call(null);    // Works even though `func` doesn't have a `call` method.
+obj.toString();     // Works even though `obj` doesn't have a `toString` method.
+					</code></pre>
+				</section>
+
+				<section>
+					<h3>Fundamental prototypes</h3>
+					<p>There is a fundamental prototype for every type of value. For example, all arrays "inherit" methods such as <code>shift</code>, <code>push</code>, <code>join</code>, and <code>concat</code> from the fundamental <code>Array.prototype</code> object.</p>
+				</section>
+
+				<section>
+					<h3>The fundamental prototype</h3>
+					<p>The <code>Object.prototype</code> object is the prototype for all other fundamental prototypes. Its prototype is <code>null</code>.</p>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
